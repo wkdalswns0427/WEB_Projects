@@ -42,6 +42,7 @@
         }
 
         .formbox {
+            display : none;
             width: 500px;
             margin: 0px auto 30px auto;
             border: 2px solid;
@@ -51,9 +52,19 @@
     </style>
 
     <script>
-        function hey(){
-            alert('hello world');
+        let count = 1;
+        function openclose(){
+            let status = $('#postbox').css('display');
+            console.log(status)
+            if (status=='block'){
+                $('#postbox').hide();
+                $('#post_btn').text('포스팅박스 열기');
+            }else{
+                $('#postbox').show();
+                $('#post_btn').text('포스팅박스 닫기');
+            }
         }
+
         function save(){
             alert('saved');
         }
@@ -67,14 +78,14 @@
         <p class="lead">중요한 링크를 저장해두고, 나중에 볼 수 있는 공간입니다</p>
         <hr class="my-4">
         <p class="lead">
-            <a onclick="hey()" class="btn btn-primary btn-lg" href="#" role="button">포스팅박스 열기</a>
+            <a onclick="openclose()" id="post_btn" class="btn btn-primary btn-lg" href="#" role="button">포스팅박스 열기</a>
         </p>
     </div>
 
-    <div class="formbox">
+    <div class="formbox", id = "postbox">
         <div class="form-group">
-            <label for="exampleInputEmail1">아티클 URL</label>
-            <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+            <label>아티클 URL</label>
+            <input type="email" class="form-control" id="article-URL" aria-describedby="emailHelp">
 
         </div>
         <div class="form-group">
@@ -85,9 +96,9 @@
         <button onclick="save()" type="submit" class="btn btn-primary">기사 저장</button>
     </div>
 
-    <div class="card-columns">
+    <div class="card-columns" id="cards">
         <div class="card">
-            {<img class="card-img-top" }
+            <img class="card-img-top"
                  src="data:image/jpeg;base64,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"
                  alt="Card image cap">
             <div class="card-body">
