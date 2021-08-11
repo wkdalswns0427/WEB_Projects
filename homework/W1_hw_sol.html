@@ -1,4 +1,4 @@
-```html
+
 <!doctype html>
 <html lang="en">
 
@@ -65,6 +65,19 @@
     </style>
 
     <script>
+        function dol_rate(){
+            $.ajax({
+                type: "GET",
+                url: "http://spartacodingclub.shop/sparta_api/rate",
+                data: {},
+
+                success: function (response) {
+                    let rows = response[0]['rate']
+                    console.log(rate)
+                }
+            })
+        }
+
         function order(){
             alert('주문이 완료되었습니다!');
         }
