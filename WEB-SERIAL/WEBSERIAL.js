@@ -1,131 +1,101 @@
-// WEB based SPD-500 serial program
+const connectButton = document.getElementById("connectButton");
+const disconnectButton = document.getElementById("disconnectButton");
+const colourPicker = document.getElementById("colourPicker");
+const colourButton = document.getElementById("colourButton");
 
-var port =0;
-var intprice = 0;
+const connect = document.getElementById("connect");
+const deviceHeartbeat = document.getElementById("deviceHeartbeat");
+const deviceButtonPressed = document.getElementById("deviceButtonPressed");
 
-// custom crc
-function crc16(data, offset = 0) {
-    var crc, length;
-    length = data.length;
-  
-    if (data === null || offset < 0 || offset > data.length - 1 && offset + length > data.length) {
-      return 0;
-    }
-  
-    crc = 0;
-    for (var i = 0, _pj_a = length; i < _pj_a; i += 1) {
-      crc ^= data[i];
-  
-      for (var j = 0, _pj_b = 8; j < _pj_b; j += 1) {
-        if ((crc & 1) > 0) {
-          crc = (crc >> 1) ^ 40961;
-        } else {
-          crc = crc >> 1;
-        }
-      }
-    }
-  
-    return crc.toString(16);
-  }
+connectButton.onclick = async () => {
+    // get a device object
+    var device = new WebUSBSerialDevice({
+        overridePortSettings: false,
+        // these are the defaults, this config is only used if above is true
+        baud: 115200,
+        bits: 8,
+        stop: 1,
+        parity: false
+    });
 
-async function connectDevice(){
-    const filter = {
-        usbVendorId: 0x067B
-        // usbVendorId: 0x0403
-      };
-    
-    const connectButton = document.getElementById("connect");
+    // get available ports (ftdi devices)
+    console.log(device.getAvailablePorts());
+
+    // shows browser request for usb device
+    var port = await device.requestNewPort();
+
     try {
-        port = await navigator.serial.requestPort({ filters: [filter] });
-        // Continue connecting to the device attached to |port|.
-        await port.open({
-            baudRate: 115200
-        })
+        // try to connect, connect receives two parameters: data callback and error callback
+        await port.connect((data) => {
+            // this is data callback, print data to console
+            console.log(data);
+            // send/repeat received data back to port after 10ms
+            setTimeout(()=>{
+                port.send(data);
+            },10);
+        }, (error) => {
+        // called if error receiving data
+            console.warn("Error receiving data: " + error)
+        });
     } catch (e) {
-        // The prompt has been dismissed without selecting a device.
-        document.write("access denided.");
+        // called if can't get a port
+        console.warn("Error connecting to port: " + e.error);
     }
 }
 
-async function sendConfirm(){
-  const confirm = new Uint8Array([0x06,0x06,0x06,0x06]); // encode this way
-  const writer = port.writable.getWriter();
-  await writer.write(confirm);
-  writer.releaseLock();
-}
+/*
+connectButton.onclick = async () => {
+  device = await navigator.usb.requestDevice({
+    filters: [{ vendorId: 0x0403 }]
+  });
+  console.log(device.productName);
+  console.log(device.manufacturerName);
+  await device.open();
+  await device.selectConfiguration(1);
+  await device.claimInterface(0);
 
-async function purchaseLoop(){
-    console.log("loop")
-    while (port.readable) {
-        const reader = port.readable.getReader();
-        while (true) {
-          let value, done;
-          try {
-            ({ value, done } = await reader.read());
-          } catch (error) {
-            // Handle |error|...
-            break;
-          }
-          if (done) {
-            // |reader| has been canceled.
-            break;
-          }
-          if (value.length > 4){
-            console.log(value)
-            sendConfirm();
-            if(value[6] == 0){
-                alert(`credit card purchace approved : ${intprice} won`);
-            }
-            break
-          }
-        }
-        console.log("read done")
-        reader.releaseLock();
-      }
+//   connected.style.display = "block";
+  connected.style.display = "block";
+  connectButton.style.display = "none";
+  disconnectButton.style.display = "initial";
+  listen();
+};
+*/
+const listen = async () => {
+  const result = await device.transferIn(1, 10);
+  console.log(`result : ${result}`)
+  const decoder = new TextDecoder;
+  var message = decoder.decode(result.data);
+  console.log(`message : ${message}`)
 
-}  
+//   const messageParts = message.split(" = ");
+//   if (messageParts[0] === "Count") {
+//     deviceHeartbeat.innerText = messageParts[1];
+//   } else if (messageParts[0] === "Button" && messageParts[1] === "1") {
+//     deviceButtonPressed.innerText = new Date().toLocaleString("en-ZA", {
+//       hour: "numeric",
+//       minute: "numeric",
+//       second: "numeric",
+//     });
+//   }
+  listen();
+};
 
-function getPrice(){
-    var price = document.getElementById('price').value;
 
-    var zero = "0";
-    var plength = price.length;
-    intprice = price;
+colourButton.onclick = async () => {
+  const data = new Uint8Array([0x06, 0x06, 0x06, 0x06]);
+  
+  await device.transferOut(2, data);
+  console.log(`send : ${data}`);
+};
 
-    // set price value to 6 digit value
-    if(plength<6){
-        for(var i = 0; 6-plength-i>0;i++){
-            price = zero.concat(price);
-        }
-    }
-    var STX = [0x02];
-    var retcrc =[0x00, 0x08, 0xf8, 0x20, 0x02, parseInt(price.substring(0,2),16), parseInt(price.substring(2,4),16), parseInt(price.substring(4,6),16), 0x03];
-    var pricecrc = crc16(retcrc);
-    var clength = pricecrc.length;
+disconnectButton.onclick = async () => {
+  await device.close();
+  deviceHeartbeat = 0;
 
-    if(clength<4){
-        for(var i = 0; 4-clength-i>0;i++){
-            pricecrc = zero.concat(pricecrc);
-        }
-    }
+  connected.style.display = "none";
+  connectButton.style.display = "initial";
+  disconnectButton.style.display = "none";
+};
 
-    var fincrc = [parseInt(pricecrc.substring(0,2),16), parseInt(pricecrc.substring(2,4),16)];
-    var price_protocol = STX.concat(retcrc.concat(fincrc));
-    price_protocol = new Uint8Array(price_protocol);
-
-    return price_protocol;
-}
-
-async function sendPrice(){
-    price_protocol = getPrice();
-    const writer = port.writable.getWriter();
-    await writer.write(price_protocol);
-    writer.releaseLock();
-}
-
-async function portClose(){
-
-    await port.close();
-    document.write("close");
-
-}
+// await device.transferOut(1, data)
