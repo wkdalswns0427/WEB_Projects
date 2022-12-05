@@ -31,8 +31,9 @@ enum  {
   BLINK_ALWAYS_ON   = UINT32_MAX,
   BLINK_ALWAYS_OFF  = 0
 };
-// uint8_t prbuf[64];
-// uint32_t cnt;
+
+uint8_t prbuf[64];
+uint32_t cnt;
 
 static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
@@ -77,9 +78,6 @@ int main(void)
 
   while (1)
   {
-    uint8_t prbuf[64];
-    uint32_t cnt;
-
     ws_get_price();
     uart_task();
     tud_task();
@@ -254,11 +252,12 @@ void ws_get_price(void)
   {
     if ( tud_vendor_available() )
     {
+
       cnt = tud_vendor_read(prbuf, sizeof(prbuf));
+      
       echo_all(prbuf, cnt);
     }
   }
-  
 }
 
 // Invoked when cdc when line state changed e.g connected/disconnected
@@ -310,9 +309,8 @@ void uart_send_price(void){
     //     echo_all(prbuf, cnt);
     //   }
     // }
-    uint8_t price[12] = {0x02, 0x00, 0x08, 0xf8, 0x20, 0x02, 0x00, 0x10, 0x00, 0x03, 0x0D, 0x47};
+    // uint8_t price[12] = {0x02, 0x00, 0x08, 0xf8, 0x20, 0x02, 0x00, 0x10, 0x00, 0x03, 0x0D, 0x47};
     // uart_write_blocking(UART_ID, price, sizeof(price));
-    // tud_vendor_write(price, sizeof(price));
     uart_write_blocking(UART_ID, prbuf, cnt);
 
 }
@@ -332,7 +330,7 @@ void uart_task(){
     sleep_ms(1000);
 
     uart_send_price();
-    sleep_ms(2000);
+    sleep_ms(2500);
 
     uart_send_confirm();
   }
