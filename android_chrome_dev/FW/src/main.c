@@ -51,9 +51,8 @@ static bool web_serial_connected = false;
 
 //------------- prototypes -------------//
 void led_blinking_task(void);
-// void cdc_task(uint8_t buf[]);
 void webserial_task(void);
-void ws_get_price(void);
+void SPD_500(void);
 
 void uart_send_confirm(void);
 void uart_send_price(void);
@@ -67,24 +66,20 @@ int main(void)
 {
   board_init();
   tusb_init();
-  uart_init(UART_ID, BAUD_RATE);
+  // uart_init(UART_ID, BAUD_RATE);
 
-  // Set the TX and RX pins by using the function select on the GPIO
-  // Set datasheet for more information on function select
-  gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-  gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-  uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
-  uart_set_fifo_enabled(UART_ID, false);
+  // gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+  // gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+  // uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
+  // uart_set_fifo_enabled(UART_ID, false);
 
   while (1)
   {
-    ws_get_price();
-    uart_task();
+    SPD_500();
     tud_task();
     led_blinking_task();
 
   }
-
   return 0;
 }
 
@@ -95,28 +90,6 @@ void echo_all(uint8_t buf[], uint32_t count)
   if ( web_serial_connected )
   {
     tud_vendor_write(buf, count);
-  }
-
-  // echo to cdc
-  if ( tud_cdc_connected() )
-  {
-    for(uint32_t i=0; i<count; i++)
-    {
-      tud_cdc_write_char(buf[i]);
-
-      if ( buf[i] == '\r' ) tud_cdc_write_char('\n');
-    }
-    tud_cdc_write_flush();
-  }
-}
-
-void send_dummy(uint8_t buf[], uint32_t count)
-{
-  // echo to web serial
-  uint8_t confirm[4] = {'6','6','6','6'};
-  if ( web_serial_connected )
-  {
-    tud_vendor_write(confirm, 4);
   }
 
   // echo to cdc
@@ -228,38 +201,6 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_requ
   return false;
 }
 
-/*
-void webserial_task(void)
-{
-  if ( web_serial_connected )
-  {
-    if ( tud_vendor_available() )
-    {
-      uint8_t buf[64];
-      uint32_t count = tud_vendor_read(buf, sizeof(buf));
-      
-      // echo back to both web serial and cdc
-      echo_all(buf, count); //reacts to webserial
-      send_dummy(buf, count);
-    }
-  }
-}
-*/
-
-void ws_get_price(void)
-{
-  if ( web_serial_connected )
-  {
-    if ( tud_vendor_available() )
-    {
-
-      cnt = tud_vendor_read(prbuf, sizeof(prbuf));
-      
-      echo_all(prbuf, cnt);
-    }
-  }
-}
-
 // Invoked when cdc when line state changed e.g connected/disconnected
 void tud_cdc_line_state_cb(uint8_t itf, bool dtr, bool rts)
 {
@@ -292,46 +233,58 @@ void led_blinking_task(void)
   led_state = 1 - led_state; // toggle
 }
 
+void SPD_500(void)
+{
+  if ( web_serial_connected )
+  {
+    if ( tud_vendor_available() )
+    {
+      cnt = tud_vendor_read(prbuf, sizeof(prbuf));
+      tud_vendor_write_str("refresh prbuf");
+      echo_all(prbuf, cnt);
+    }
+  }
+  uart_task();
+}
+
+// send confirm message 6 6 6 6
 void uart_send_confirm(void)
 {
-    uint8_t conf_msg[4] = {0x06, 0x06, 0x06, 0x06};
-    uart_write_blocking(UART_ID, conf_msg, 4);
+  uint8_t conf_msg[4] = {0x06, 0x06, 0x06, 0x06};
+  uart_write_blocking(UART_ID, conf_msg, 4);
 };
 
 
-void uart_send_price(void){
-    // get price data from somewhere
-    // global buffer
-    // if ( web_serial_connected )
-    // {
-    //   if ( tud_vendor_available() )
-    //   {
-    //     echo_all(prbuf, cnt);
-    //   }
-    // }
-    // uint8_t price[12] = {0x02, 0x00, 0x08, 0xf8, 0x20, 0x02, 0x00, 0x10, 0x00, 0x03, 0x0D, 0x47};
-    // uart_write_blocking(UART_ID, price, sizeof(price));
-    uart_write_blocking(UART_ID, prbuf, cnt);
-
+void uart_send_price(void)
+{
+  uart_write_blocking(UART_ID, prbuf, cnt); 
 }
 
 void uart_task(){
-  if(uart_is_readable(UART_ID) != 0){
-    led_blinking_task();
+  uart_init(UART_ID, BAUD_RATE);
 
+  gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+  gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+  uart_set_format(UART_ID, DATA_BITS, STOP_BITS, PARITY);
+  uart_set_fifo_enabled(UART_ID, false);
+
+  if(uart_is_readable_within_us(UART_ID,1000) != 0){
+    led_blinking_task();
+    
     uint8_t initdata[8];
+    tud_vendor_write(initdata, sizeof(initdata));
     uart_read_blocking(UART_ID, initdata, sizeof(initdata));
     tud_vendor_write(initdata, sizeof(initdata));
 
     uart_send_confirm();
+    sleep_ms(1000);
 
     tud_vendor_write(prbuf, cnt);
 
-    sleep_ms(1000);
-
     uart_send_price();
-    sleep_ms(2500);
+    sleep_ms(2000);
 
     uart_send_confirm();
   }
+  uart_deinit(UART_ID);
 }
