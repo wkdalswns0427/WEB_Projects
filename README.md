@@ -1,5 +1,13 @@
-# WEB_Communication
+# WEB_Projects
 Web based HW communication
+
+### TIS-PAGE
+node 16.20.1
+```
+node app.js
+```
+- fetch data from mongodb database (api in this case)
+- display as card on webpage
 
 Web based hardware control project
 target device : SPD-500 card terminal, Raspberry Pi Pico, Arduino Leonardo
