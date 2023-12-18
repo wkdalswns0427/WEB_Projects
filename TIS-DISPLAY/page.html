@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html class="no-js">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Refresh" content="4">
+        <title>HDR TIS</title>
+        <link rel="stylesheet" type="text/css" href="/css/page.css">
+        <style>
+            .js #fouc {display: none;}
+        </style>
+    </head>
+
+
+    <body>
+        <div class="menu" id="fouc" >
+            <nav class="clearfix">
+              <ul class="clearfix">
+                <img src = "images/logo.png" style="margin:10px;width:60px; height:60px; float: left; margin-top:  5px;">
+                <li><a href="https://drimaes.com/ " >DA</a></li> <!--""<-여기 부분에 URL 작성하면 됨-->
+                <li><a href="https://www.hyundai-robotics.com/">HDR</a></li>
+            </ul>
+            <a id="pull" href="#"></a>
+          </nav>
+        </div>
+
+        <div id="footer">
+            <button style="position: relative; top: 10px; left: 10px;" onclick="refreshPage()" >
+            <img src="images/refresh.png" style="width:30px; height:30px;">
+            </button>
+            <div style="position: absolute; right: 150px; bottom: 20px;font-weight: bold; font-size : 40px; color: antiquewhite" >금일 총 매출(원)</div>
+            <div id="overalldata" style="position: absolute; right: 20px; bottom: 20px; font-weight: bold; font-size : 35px; color: antiquewhite;" onload="val = overallData()">${val}</div>
+        </div>
+        <script src="/src/page_logic.js">
+        </script>
+    </body>
+</html>
+  
+  
